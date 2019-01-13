@@ -66,9 +66,6 @@ namespace Traclus {
         }
         // use the following constructor instead
         public ClusterGen(TraClusterDoc document) {
-            if (document.m_nDimensions != 2) {
-                throw new NotImplementedException("Can only accept points of dimension 2");
-            }
 
             m_document = document;
 
@@ -128,15 +125,14 @@ namespace Traclus {
 
         private bool storeClusterComponentIntoIndex() {
 
-            int nDimensions = m_document.m_nDimensions;
             Point2D startPoint;
             Point2D endPoint;
 
             m_nTotalLineSegments = 0;
-            for (int i = 0; i < m_document.m_trajectoryList.Count; i++) {
-                Trajectory pTrajectory = m_document.m_trajectoryList[i];
+            foreach (Trajectory pTrajectory in m_document.m_trajectoryList) {
 
-                for (int j = 0; j < pTrajectory.getM_nPartitionPoints() - 1; j++) {
+                int nStartPoints = pTrajectory.getM_partitionPointArray().Count - 1;
+                for (int j = 0; j < nStartPoints; j++) {
                     // convert an n-dimensional line segment into a 2n-dimensional point
                     // i.e., the first n-dimension: the start point
                     //       the last n-dimension: the end point
@@ -164,7 +160,7 @@ namespace Traclus {
 
         private void findOptimalPartition(Trajectory pTrajectory) {
 
-            int nPoints = pTrajectory.getM_nPoints();
+            int nPoints = pTrajectory.getM_pointArray().Count;
             int startIndex = 0, length;
             int fullPartitionMDLCost, partialPartitionMDLCost;
 
@@ -454,7 +450,7 @@ namespace Traclus {
 
             }
             //  DEBUG: compute the ratio of trajectories that belong to clusters
-            m_document.m_clusterRatio = (double)trajectories.Count / (double)m_document.m_nTrajectories;
+            m_document.m_clusterRatio = (double)trajectories.Count / (double)m_document.m_trajectoryList.Count;
 
             return true;
         }
@@ -543,7 +539,6 @@ namespace Traclus {
                 LineSegmentCluster clusterEntry,
                 double currValue,
                 HashSet<int> lineSegments) {
-            int nDimensions = m_document.m_nDimensions;
             int nLineSegmentsInSet = lineSegments.Count;
             Point2D clusterPoint = new Point2D(0, 0);
             Point2D sweepPoint = new Point2D(0, 0);
@@ -696,7 +691,7 @@ namespace Traclus {
 
                 //  store the clusters constly identified
                 //  START ...
-                Cluster pClusterItem = new Cluster(currClusterId, m_document.m_nDimensions);
+                Cluster pClusterItem = new Cluster(currClusterId);
 
                 for (int j = 0; j < m_lineSegmentClusters[i].nClusterPoints; j++) {
                     pClusterItem.addPointToArray(m_lineSegmentClusters[i].clusterPointArray[j]);
@@ -710,7 +705,6 @@ namespace Traclus {
                                     //  ... END
             }
 
-            m_document.m_nClusters = currClusterId;
             return true;
         }
 

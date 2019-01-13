@@ -12,18 +12,12 @@ namespace Traclus {
 
     public class TraClusterDoc {
 
-        public int m_nDimensions;
-        public int m_nTrajectories;
-        public int m_nClusters;
-        public double m_clusterRatio;
-        public int m_maxNPoints;
-        public List<Trajectory> m_trajectoryList;
-        public List<Cluster> m_clusterList;
+        public double m_clusterRatio; // for debugging
+        public List<Trajectory> m_trajectoryList; // input for traclus
+        public List<Cluster> m_clusterList; // output of traclus
 
         public TraClusterDoc() {
 
-            m_nTrajectories = 0;
-            m_nClusters = 0;
             m_clusterRatio = 0.0;
             m_trajectoryList = new List<Trajectory>();
             m_clusterList = new List<Cluster>();
@@ -34,13 +28,15 @@ namespace Traclus {
             try {
 			    reader = File.OpenText(inputFileName);
 
-                m_nDimensions = int.Parse(reader.ReadLine());
-                m_nTrajectories = int.Parse(reader.ReadLine());
+                int nDimensions = int.Parse(reader.ReadLine());
+                if (nDimensions != 2) {
+                    throw new NotImplementedException("Dimension must be 2");
+                }
 
-                m_maxNPoints = -1; // initialize for comparison
+                int nTrajectories = int.Parse(reader.ReadLine());
 
                 // the trajectory Id, the number of points, the coordinate of a point ...
-                for (int i = 0; i < m_nTrajectories; i++) {
+                for (int i = 0; i < nTrajectories; i++) {
 
                     String str = reader.ReadLine();
 
@@ -49,11 +45,7 @@ namespace Traclus {
                     int trajectoryId = sc.nextInt(); //trajectoryID
                     int nPoints = sc.nextInt(); // number of points in the trajectory
 
-                    if (nPoints > m_maxNPoints) {
-                        m_maxNPoints = nPoints;
-                    }
-
-                    Trajectory pTrajectoryItem = new Trajectory(trajectoryId, m_nDimensions);
+                    Trajectory pTrajectoryItem = new Trajectory(trajectoryId);
                     for (int j = 0; j < nPoints; j++) {
                         Point2D point = new Point2D(0, 0);   // initialize the CMDPoint class for each point
 
@@ -87,7 +79,7 @@ namespace Traclus {
 
             ClusterGen generator = new ClusterGen(this);
 
-            if (m_nTrajectories == 0) {
+            if (m_trajectoryList.Count == 0) {
                 Console.WriteLine("Load a trajectory data set first");
             }
 

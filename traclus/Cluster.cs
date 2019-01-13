@@ -5,26 +5,20 @@ namespace Traclus
     public class Cluster
     {
         private int m_clusterId;        // the identifier of this cluster
-        private int m_nDimensions;      // the dimensionality of this cluster
-        private int m_nTrajectories;    // the number of trajectories belonging to this cluster
-        private int m_nPoints;          // the number of points constituting a cluster 
+        private int m_nTrajectories;    // the minimum number of trajectories belonging to this cluster
         private List<Point2D> m_pointArray;   // the array of the cluster points
 
         public Cluster()
         {
             m_clusterId = -1;
-            m_nDimensions = 2;
             m_nTrajectories = 0;
-            m_nPoints = 0;
             m_pointArray = new List<Point2D>();
         }
 
-        public Cluster(int id, int nDimensions)
+        public Cluster(int id)
         {
             m_clusterId = id;
-            m_nDimensions = nDimensions;
             m_nTrajectories = 0;
-            m_nPoints = 0;
             m_pointArray = new List<Point2D>();
         }
 
@@ -58,7 +52,6 @@ namespace Traclus
         public void addPointToArray(Point2D point)
         {
             m_pointArray.Add(point);
-            m_nPoints++;
         }
 
         public List<Point2D> getM_PointArray()
