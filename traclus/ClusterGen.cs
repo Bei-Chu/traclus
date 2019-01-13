@@ -33,13 +33,13 @@ namespace Traclus {
             HEAD, TAIL
         }
 
-        class LineSegmentId {
+        struct LineSegmentId {
 
             public int trajectoryId;
             public int order;
         }
 
-        class CandidateClusterPoint {
+        struct CandidateClusterPoint {
 
             public double orderingValue;
             public int lineSegmentId;

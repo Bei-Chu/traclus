@@ -15,15 +15,19 @@ namespace Traclus {
         public double m_clusterRatio; // for debugging
         public List<Trajectory> m_trajectoryList; // input for traclus
         public List<Cluster> m_clusterList; // output of traclus
+        private Parameter m_parameter;
 
         public TraClusterDoc() {
 
             m_clusterRatio = 0.0;
             m_trajectoryList = new List<Trajectory>();
             m_clusterList = new List<Cluster>();
+            m_parameter = new Parameter();
+            m_parameter.epsParam = 0.0;
+            m_parameter.minLnsParam = 0;
         }
 
-        public bool onOpenDocument(String inputFileName) {
+        public bool OpenDocument(String inputFileName) {
             TextReader reader = null;
             try {
 			    reader = File.OpenText(inputFileName);
@@ -74,8 +78,10 @@ namespace Traclus {
             return true;
         }
 
-        public bool onClusterGenerate(String clusterFileName, double epsParam, int minLnsParam) {
-            //////////////////////////////////////////////////still to be written
+        public bool ClusterGenerate(double epsParam, int minLnsParam) {
+
+            m_parameter.epsParam = epsParam;
+            m_parameter.minLnsParam = minLnsParam;
 
             ClusterGen generator = new ClusterGen(this);
 
@@ -117,11 +123,16 @@ namespace Traclus {
                 Console.WriteLine("");
             }
 
+            return true;
+        }
+
+        public bool WriteResult(String clusterFileName) {
+
             TextWriter writer = null;
             try {
                 writer = File.CreateText(clusterFileName);
 
-                writer.WriteLine("epsParam:" + epsParam + "   minLnsParam:" + minLnsParam);
+                writer.WriteLine("epsParam:" + m_parameter.epsParam + "   minLnsParam:" + m_parameter.minLnsParam);
 
                 for (int i = 0; i < m_clusterList.Count; i++) {
                     // m_clusterList.
@@ -149,7 +160,7 @@ namespace Traclus {
             return true;
         }
 
-        public Parameter onEstimateParameter() {
+        public Parameter EstimateParameter() {
             Parameter p = new Parameter();
             ClusterGen generator = new ClusterGen(this);
             if (!generator.partitionTrajectory()) {

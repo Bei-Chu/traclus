@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{65D9C1B8-694D-445B-B94E-97673381C568}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>csharp</RootNamespace>
-    <AssemblyName>csharp</AssemblyName>
+    <RootNamespace>traclus</RootNamespace>
+    <AssemblyName>traclus</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
