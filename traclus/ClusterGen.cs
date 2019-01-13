@@ -28,7 +28,7 @@ namespace Traclus {
 
         private const int MDL_COST_ADWANTAGE = 25;
         private const int INT_MAX = int.MaxValue;
-        // used for InsertClusterPoint() and ReplaceClusterPoint() 
+        // used for InsertClusterPoint() and ReplaceClusterPoint()
         enum PointLocation {
             HEAD, TAIL
         }
@@ -60,7 +60,7 @@ namespace Traclus {
             public List<int> trajectoryIdList = new List<int>();
             public bool enabled;
         }
-        // this default constructor should be never used	
+        // this default constructor should be never used
         public ClusterGen() {
 
         }
@@ -179,7 +179,7 @@ namespace Traclus {
                     // compute the total length of a trajectory
                     fullPartitionMDLCost += computeModelCost(pTrajectory, startIndex + length - 1, startIndex + length);
 
-                    // compute the sum of (1) the length of a cluster component and 
+                    // compute the sum of (1) the length of a cluster component and
                     // 					 (2) the perpendicular and angle distances
                     partialPartitionMDLCost = computeModelCost(pTrajectory, startIndex, startIndex + length) +
                             computeEncodingCost(pTrajectory, startIndex, startIndex + length);
@@ -262,12 +262,12 @@ namespace Traclus {
             distance1 = measureDistanceFromPointToLineSegment(s1, e1, s2);
             distance2 = measureDistanceFromPointToLineSegment(s1, e1, e2);
 
-            //  if the first line segment is exactly the same as the second one, 
+            //  if the first line segment is exactly the same as the second one,
             //  the perpendicular distance should be zero
             if (distance1 == 0.0 && distance2 == 0.0) return 0.0;
 
             //  return (d1^2 + d2^2) / (d1 + d2) as the perpendicular distance
-            return ((Math.Pow(distance1, 2) + Math.Pow(distance2, 2)) / (distance1 + distance2));
+            return (distance1 * distance1 + distance2 * distance2) / (distance1 + distance2);
 
         }
 
@@ -321,7 +321,7 @@ namespace Traclus {
             if (cosTheta > 1.0) cosTheta = 1.0;
             if (cosTheta < -1.0) cosTheta = -1.0;
             //  ... END
-            double sinTheta = Math.Sqrt(1 - Math.Pow(cosTheta, 2));
+            double sinTheta = Math.Sqrt(1 - cosTheta * cosTheta);
             //  if 90 <= theta <= 270, the angle distance becomes the length of the line segment
             //  if (cosTheta < -1.0) sinTheta = 1.0;
 
@@ -752,7 +752,7 @@ namespace Traclus {
 
             //  compute the perpendicular distance; take (d1^2 + d2^2) / (d1 + d2)
             if (!(perDistance1 == 0.0 && perDistance2 == 0.0)) {
-                perpendicularDistance = ((Math.Pow(perDistance1, 2) + Math.Pow(perDistance2, 2)) / (perDistance1 + perDistance2));
+                perpendicularDistance = (perDistance1 * perDistance1 + perDistance2 * perDistance2) / (perDistance1 + perDistance2);
             } else {
                 perpendicularDistance = 0.0;
             }
