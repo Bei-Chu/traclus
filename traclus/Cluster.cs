@@ -8,7 +8,7 @@ namespace Traclus
         private int m_nDimensions;      // the dimensionality of this cluster
         private int m_nTrajectories;    // the number of trajectories belonging to this cluster
         private int m_nPoints;          // the number of points constituting a cluster 
-        private List<CMDPoint> m_pointArray;   // the array of the cluster points
+        private List<Point2D> m_pointArray;   // the array of the cluster points
 
         public Cluster()
         {
@@ -16,7 +16,7 @@ namespace Traclus
             m_nDimensions = 2;
             m_nTrajectories = 0;
             m_nPoints = 0;
-            m_pointArray = new List<CMDPoint>();
+            m_pointArray = new List<Point2D>();
         }
 
         public Cluster(int id, int nDimensions)
@@ -25,7 +25,7 @@ namespace Traclus
             m_nDimensions = nDimensions;
             m_nTrajectories = 0;
             m_nPoints = 0;
-            m_pointArray = new List<CMDPoint>();
+            m_pointArray = new List<Point2D>();
         }
 
         public void setM_clusterId(int clusterId)
@@ -55,13 +55,13 @@ namespace Traclus
             return m_nTrajectories;
         }
 
-        public void addPointToArray(CMDPoint point)
+        public void addPointToArray(Point2D point)
         {
             m_pointArray.Add(point);
             m_nPoints++;
         }
 
-        public List<CMDPoint> getM_PointArray()
+        public List<Point2D> getM_PointArray()
         {
             return m_pointArray;
         }

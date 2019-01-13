@@ -14,15 +14,11 @@ namespace Traclus {
         private List<int> m_componentIdArray = new List<int>();
         // the list of line segment clusters
         private LineSegmentCluster[] m_lineSegmentClusters;
-        // programming trick: avoid frequent execution of the new and delete operations
-        private CMDPoint m_startPoint1, m_endPoint1, m_startPoint2, m_endPoint2;
-        private CMDPoint m_vector1; //  = new CMDPoint(m_document.m_nDimensions);
-        private CMDPoint m_vector2; // = new CMDPoint(m_document.m_nDimensions);;
-        private CMDPoint m_projectionPoint; // = new CMDPoint( m_document.m_nDimensions);;
+        private Point2D m_projectionPoint; // = new CMDPoint( m_document.m_nDimensions);;
         double m_coefficient;
 
-        private List<LineSegmentId> m_idArray = new List<ClusterGen.LineSegmentId>();
-        private List<CMDPoint> m_lineSegmentPointArray = new List<CMDPoint>();
+        private List<LineSegmentId> m_idArray = new List<LineSegmentId>();
+        private List<Segment> m_lineSegmentPointArray = new List<Segment>();
 
         // used for performing the DBSCAN algorithm
         public const int UNCLASSIFIED = -2;
@@ -55,11 +51,11 @@ namespace Traclus {
 
             public int lineSegmentClusterId;
             public int nLineSegments;
-            public CMDPoint avgDirectionVector;
+            public Point2D avgDirectionVector;
             public double cosTheta, sinTheta;
-            public List<CandidateClusterPoint> candidatePointList = new List<ClusterGen.CandidateClusterPoint>();
+            public List<CandidateClusterPoint> candidatePointList = new List<CandidateClusterPoint>();
             public int nClusterPoints;
-            public List<CMDPoint> clusterPointArray = new List<CMDPoint>();
+            public List<Point2D> clusterPointArray = new List<Point2D>();
             public int nTrajectories;
             public List<int> trajectoryIdList = new List<int>();
             public bool enabled;
@@ -70,17 +66,13 @@ namespace Traclus {
         }
         // use the following constructor instead
         public ClusterGen(TraClusterDoc document) {
+            if (document.m_nDimensions != 2) {
+                throw new NotImplementedException("Can only accept points of dimension 2");
+            }
+
             m_document = document;
 
-            m_startPoint1 = new CMDPoint(m_document.m_nDimensions);
-            m_startPoint2 = new CMDPoint(m_document.m_nDimensions);
-            m_endPoint1 = new CMDPoint(m_document.m_nDimensions);
-            m_endPoint2 = new CMDPoint(m_document.m_nDimensions);
-
-            m_vector1 = new CMDPoint(m_document.m_nDimensions);
-            m_vector2 = new CMDPoint(m_document.m_nDimensions);
-            m_projectionPoint = new CMDPoint(m_document.m_nDimensions);
-
+            m_projectionPoint = new Point2D(0, 0);
 
             m_idArray.Clear();
             m_lineSegmentPointArray.Clear();
@@ -137,8 +129,8 @@ namespace Traclus {
         private bool storeClusterComponentIntoIndex() {
 
             int nDimensions = m_document.m_nDimensions;
-            CMDPoint startPoint;
-            CMDPoint endPoint;
+            Point2D startPoint;
+            Point2D endPoint;
 
             m_nTotalLineSegments = 0;
             for (int i = 0; i < m_document.m_trajectoryList.Count; i++) {
@@ -151,16 +143,12 @@ namespace Traclus {
                     startPoint = pTrajectory.getM_partitionPointArray()[j];
                     endPoint = pTrajectory.getM_partitionPointArray()[j + 1];
 
-                    if (measureDistanceFromPointToPoint(startPoint, endPoint) < MIN_LINESEGMENT_LENGTH) {
+                    if ((startPoint - endPoint).Length() < MIN_LINESEGMENT_LENGTH) {
                         continue;
                     }
                     m_nTotalLineSegments++;
 
-                    CMDPoint lineSegmentPoint = new CMDPoint(nDimensions * 2);
-                    for (int m = 0; m < nDimensions; m++) {
-                        lineSegmentPoint.setM_coordinate(m, startPoint.getM_coordinate(m));
-                        lineSegmentPoint.setM_coordinate(nDimensions + m, endPoint.getM_coordinate(m));
-                    }
+                    Segment lineSegmentPoint = new Segment(startPoint, endPoint);
 
                     LineSegmentId id = new LineSegmentId();
                     id.trajectoryId = pTrajectory.getM_trajectoryId();
@@ -181,7 +169,7 @@ namespace Traclus {
             int fullPartitionMDLCost, partialPartitionMDLCost;
 
             // add the start point of a trajectory
-            CMDPoint startP = pTrajectory.getM_pointArray()[0];
+            Point2D startP = pTrajectory.getM_pointArray()[0];
             pTrajectory.addPartitionPointToArray(startP);
 
             for (; ; ) {
@@ -222,10 +210,10 @@ namespace Traclus {
 
         private int computeModelCost(Trajectory pTrajectory, int startPIndex, int endPIndex) {
 
-            CMDPoint lineSegmentStart = pTrajectory.getM_pointArray()[startPIndex];
-            CMDPoint lineSegmentEnd = pTrajectory.getM_pointArray()[endPIndex];
+            Point2D lineSegmentStart = pTrajectory.getM_pointArray()[startPIndex];
+            Point2D lineSegmentEnd = pTrajectory.getM_pointArray()[endPIndex];
 
-            double distance = measureDistanceFromPointToPoint(lineSegmentStart, lineSegmentEnd);
+            double distance = (lineSegmentStart - lineSegmentEnd).Length();
 
             if (distance < 1.0) {
                 distance = 1.0;         // to take logarithm
@@ -237,10 +225,10 @@ namespace Traclus {
 
         private int computeEncodingCost(Trajectory pTrajectory, int startPIndex, int endPIndex) {
 
-            CMDPoint clusterComponentStart;
-            CMDPoint clusterComponentEnd;
-            CMDPoint lineSegmentStart;
-            CMDPoint lineSegmentEnd;
+            Point2D clusterComponentStart;
+            Point2D clusterComponentEnd;
+            Point2D lineSegmentStart;
+            Point2D lineSegmentEnd;
             double perpendicularDistance;
             double angleDistance;
             int encodingCost = 0;
@@ -265,7 +253,7 @@ namespace Traclus {
             return encodingCost;
 
         }
-        private double measurePerpendicularDistance(CMDPoint s1, CMDPoint e1, CMDPoint s2, CMDPoint e2) {
+        private double measurePerpendicularDistance(Point2D s1, Point2D e1, Point2D s2, Point2D e2) {
 
             //  we assume that the first line segment is longer than the second one
             double distance1;   //  the distance from a start point to the cluster component
@@ -283,91 +271,47 @@ namespace Traclus {
 
         }
 
-        private double measureDistanceFromPointToLineSegment(CMDPoint s, CMDPoint e, CMDPoint p) {
-
-            int nDimensions = p.getM_nDimensions();
+        private double measureDistanceFromPointToLineSegment(Point2D s, Point2D e, Point2D p) {
 
             //  NOTE: the variables m_vector1 and m_vector2 are declared as member variables
 
             //  construct two vectors as follows
             //  1. the vector connecting the start point of the cluster component and a given point
             //  2. the vector representing the cluster component
-            for (int i = 0; i < nDimensions; i++)
-            {
-                m_vector1.setM_coordinate(i, p.getM_coordinate(i) - s.getM_coordinate(i));
-                m_vector2.setM_coordinate(i, e.getM_coordinate(i) - s.getM_coordinate(i));
-            }
+
+            var m_vector1 = p - s;
+            var m_vector2 = e - s;
 
             //  a coefficient (0 <= b <= 1)
-            m_coefficient = computeInnerProduct(m_vector1, m_vector2) / computeInnerProduct(m_vector2, m_vector2);
+            m_coefficient = m_vector1.Dot(m_vector2) / m_vector2.Dot(m_vector2);
 
             //  the projection on the cluster component from a given point
             //  NOTE: the variable m_projectionPoint is declared as a member variable
 
-            for (int i = 0; i < nDimensions; i++) {
-                m_projectionPoint.setM_coordinate(i, s.getM_coordinate(i) + m_coefficient * m_vector2.getM_coordinate(i));
-            }
+            m_projectionPoint = s + m_coefficient * m_vector2;
 
             //  return the distance between the projection point and the given point
-            return measureDistanceFromPointToPoint(p, m_projectionPoint);
+            return (p - m_projectionPoint).Length();
 
         }
 
-        private double measureDistanceFromPointToPoint(CMDPoint point1, CMDPoint point2) {
-
-            int nDimensions = point1.getM_nDimensions();
-            double squareSum = 0.0;
-
-            for (int i = 0; i < nDimensions; i++) {
-                squareSum += Math.Pow((point2.getM_coordinate(i) - point1.getM_coordinate(i)), 2);
-            }
-            return Math.Sqrt(squareSum);
-
-        }
-
-        private double computeVectorLength(CMDPoint vector) {
-
-            int nDimensions = vector.getM_nDimensions();
-            double squareSum = 0.0;
-
-            for (int i = 0; i < nDimensions; i++) {
-                squareSum += Math.Pow(vector.getM_coordinate(i), 2);
-            }
-
-            return Math.Sqrt(squareSum);
-        }
-
-        private double computeInnerProduct(CMDPoint vector1, CMDPoint vector2) {
-            int nDimensions = vector1.getM_nDimensions();
-            double innerProduct = 0.0;
-
-            for (int i = 0; i < nDimensions; i++) {
-                innerProduct += (vector1.getM_coordinate(i) * vector2.getM_coordinate(i));
-            }
-
-            return innerProduct;
-        }
-        private double measureAngleDisntance(CMDPoint s1, CMDPoint e1, CMDPoint s2, CMDPoint e2) {
-
-            int nDimensions = s1.getM_nDimensions();
+        private double measureAngleDisntance(Point2D s1, Point2D e1, Point2D s2, Point2D e2) {
 
             //  NOTE: the variables m_vector1 and m_vector2 are declared as member variables
             //  construct two vectors representing the cluster component and a line segment, respectively
-            for (int i = 0; i < nDimensions; i++) {
-                m_vector1.setM_coordinate(i, e1.getM_coordinate(i) - s1.getM_coordinate(i));
-                m_vector2.setM_coordinate(i, e2.getM_coordinate(i) - s2.getM_coordinate(i));
-            }
+            var m_vector1 = e1 - s1;
+            var m_vector2 = e2 - s2;
 
             //  we assume that the first line segment is longer than the second one
             //  i.e., vectorLength1 >= vectorLength2
-            double vectorLength1 = computeVectorLength(m_vector1);
-            double vectorLength2 = computeVectorLength(m_vector2);
+            double vectorLength1 = m_vector1.Length();
+            double vectorLength2 = m_vector2.Length();
 
             //  if one of two vectors is a point, the angle distance becomes zero
             if (vectorLength1 == 0.0 || vectorLength2 == 0.0) return 0.0;
 
             //  compute the inner product of the two vectors
-            double innerProduct = computeInnerProduct(m_vector1, m_vector2);
+            double innerProduct = m_vector1.Dot(m_vector2);
 
             //  compute the angle between two vectors by using the inner product
             double cosTheta = innerProduct / (vectorLength1 * vectorLength2);
@@ -389,8 +333,7 @@ namespace Traclus {
             HashSet<int> seeds = new HashSet<int>();
             HashSet<int> seedResult = new HashSet<int>();
 
-            extractStartAndEndPoints(index, m_startPoint1, m_endPoint1);
-            computeEPSNeighborhood(m_startPoint1, m_endPoint1, eps, seeds);
+            computeEPSNeighborhood(m_lineSegmentPointArray[index].start, m_lineSegmentPointArray[index].end, eps, seeds);
 
             if (seeds.Count < minDensity) { //  not a core line segment
                 m_componentIdArray[index] = NOISE;
@@ -405,8 +348,7 @@ namespace Traclus {
                 var iter = seeds.GetEnumerator();
                 iter.MoveNext();
                 int currIndex = iter.Current;
-                extractStartAndEndPoints(currIndex, m_startPoint1, m_endPoint1);
-                computeEPSNeighborhood(m_startPoint1, m_endPoint1, eps, seedResult);
+                computeEPSNeighborhood(m_lineSegmentPointArray[currIndex].start, m_lineSegmentPointArray[currIndex].end, eps, seedResult);
 
                 if (seedResult.Count >= minDensity) {
                     foreach (int i in seedResult) {
@@ -427,14 +369,13 @@ namespace Traclus {
         }
 
         bool constructLineSegmentCluster() {
-            int nDimensions = m_document.m_nDimensions;
             m_lineSegmentClusters = new LineSegmentCluster[m_currComponentId];
 
             //  initialize the list of line segment clusters
             //  START ...
             for (int i = 0; i < m_currComponentId; i++) {
                 m_lineSegmentClusters[i] = new LineSegmentCluster();
-                m_lineSegmentClusters[i].avgDirectionVector = new CMDPoint(nDimensions);
+                m_lineSegmentClusters[i].avgDirectionVector = new Point2D(0, 0);
                 m_lineSegmentClusters[i].lineSegmentClusterId = i;
                 m_lineSegmentClusters[i].nLineSegments = 0;
                 m_lineSegmentClusters[i].nClusterPoints = 0;
@@ -447,13 +388,7 @@ namespace Traclus {
             for (int i = 0; i < m_nTotalLineSegments; i++) {
                 int componentId = m_componentIdArray[i];
                 if (componentId >= 0) {
-                    for (int j = 0; j < nDimensions; j++) {
-                        double difference = m_lineSegmentPointArray[i].getM_coordinate(nDimensions + j)
-                                - m_lineSegmentPointArray[i].getM_coordinate(j);
-                        double currSum = m_lineSegmentClusters[componentId].avgDirectionVector.getM_coordinate(j)
-                                + difference;
-                        m_lineSegmentClusters[componentId].avgDirectionVector.setM_coordinate(j, currSum);
-                    }
+                    m_lineSegmentClusters[componentId].avgDirectionVector += (m_lineSegmentPointArray[i].end - m_lineSegmentPointArray[i].start);
                     m_lineSegmentClusters[componentId].nLineSegments++;
                 }
             }
@@ -463,25 +398,22 @@ namespace Traclus {
             double vectorLength1, vectorLength2, innerProduct;
             double cosTheta, sinTheta;
 
-            m_vector2.setM_coordinate(0, 1.0);
-            m_vector2.setM_coordinate(1, 0.0);
+            var m_vector2 = new Point2D(1.0, 0.0);
 
             for (int i = 0; i < m_currComponentId; i++) {
                 LineSegmentCluster clusterEntry = m_lineSegmentClusters[i];
 
-                for (int j = 0; j < nDimensions; j++) {
-                    clusterEntry.avgDirectionVector.setM_coordinate(j, clusterEntry.avgDirectionVector.getM_coordinate(j) / (double)clusterEntry.nLineSegments);
-                }
-                vectorLength1 = computeVectorLength(clusterEntry.avgDirectionVector);
+                clusterEntry.avgDirectionVector /= (double)clusterEntry.nLineSegments;
+                vectorLength1 = clusterEntry.avgDirectionVector.Length();
                 vectorLength2 = 1.0;
 
-                innerProduct = computeInnerProduct(clusterEntry.avgDirectionVector, m_vector2);
+                innerProduct = clusterEntry.avgDirectionVector.Dot(m_vector2);
                 cosTheta = innerProduct / (vectorLength1 * vectorLength2);
                 if (cosTheta > 1.0) cosTheta = 1.0;
                 if (cosTheta < -1.0) cosTheta = -1.0;
                 sinTheta = Math.Sqrt(1 - Math.Pow(cosTheta, 2));
 
-                if (clusterEntry.avgDirectionVector.getM_coordinate(1) < 0) {
+                if (clusterEntry.avgDirectionVector.y < 0) {
                     sinTheta = -sinTheta;
                 }
 
@@ -613,50 +545,41 @@ namespace Traclus {
                 HashSet<int> lineSegments) {
             int nDimensions = m_document.m_nDimensions;
             int nLineSegmentsInSet = lineSegments.Count;
-            CMDPoint clusterPoint = new CMDPoint(nDimensions);
-            CMDPoint sweepPoint = new CMDPoint(nDimensions);
+            Point2D clusterPoint = new Point2D(0, 0);
+            Point2D sweepPoint = new Point2D(0, 0);
 
             foreach (int iter in lineSegments) {
                 // get the sweep point of each line segment
                 // this point is parallel to the current value of the sweeping direction
-                getSweepPointOfLineSegment(clusterEntry, currValue, iter, sweepPoint);
-                for (int i = 0; i < nDimensions; i++) {
-                    clusterPoint.setM_coordinate(i, clusterPoint.getM_coordinate(i) +
-                            (sweepPoint.getM_coordinate(i) / (double)nLineSegmentsInSet));
-                }
+                sweepPoint = getSweepPointOfLineSegment(clusterEntry, currValue, iter);
+                clusterPoint += sweepPoint / (double)nLineSegmentsInSet;
             }
 
             // NOTE: this program code works only for the 2-dimensional data
-            double origX, origY;
-            origX = GET_X_REV_ROTATION(clusterPoint.getM_coordinate(0), clusterPoint.getM_coordinate(1), clusterEntry.cosTheta, clusterEntry.sinTheta);
-            origY = GET_Y_REV_ROTATION(clusterPoint.getM_coordinate(0), clusterPoint.getM_coordinate(1), clusterEntry.cosTheta, clusterEntry.sinTheta);
-            clusterPoint.setM_coordinate(0, origX);
-            clusterPoint.setM_coordinate(1, origY);
+            double x = GET_X_REV_ROTATION(clusterPoint.x, clusterPoint.y, clusterEntry.cosTheta, clusterEntry.sinTheta);
+            double y = GET_Y_REV_ROTATION(clusterPoint.x, clusterPoint.y, clusterEntry.cosTheta, clusterEntry.sinTheta);
 
             // register the obtained cluster point (i.e., the average of all the sweep points)
-            clusterEntry.clusterPointArray.Add(clusterPoint);
+            clusterEntry.clusterPointArray.Add(new Point2D(x, y));
 
             return;
         }
 
-        private void getSweepPointOfLineSegment(LineSegmentCluster clusterEntry,
-                double currValue, int lineSegmentId, CMDPoint sweepPoint) {
+        private Point2D getSweepPointOfLineSegment(LineSegmentCluster clusterEntry,
+                double currValue, int lineSegmentId) {
 
-            CMDPoint lineSegmentPoint = m_lineSegmentPointArray[lineSegmentId];     //  2n-dimensional point
-            double coefficient;
+            Segment lineSegmentPoint = m_lineSegmentPointArray[lineSegmentId];     //  2n-dimensional point
 
             //  NOTE: this program code works only for the 2-dimensional data
             double newStartX, newEndX, newStartY, newEndY;
-            newStartX = GET_X_ROTATION(lineSegmentPoint.getM_coordinate(0), lineSegmentPoint.getM_coordinate(1), clusterEntry.cosTheta, clusterEntry.sinTheta);
-            newEndX = GET_X_ROTATION(lineSegmentPoint.getM_coordinate(2), lineSegmentPoint.getM_coordinate(3), clusterEntry.cosTheta, clusterEntry.sinTheta);
-            newStartY = GET_Y_ROTATION(lineSegmentPoint.getM_coordinate(0), lineSegmentPoint.getM_coordinate(1), clusterEntry.cosTheta, clusterEntry.sinTheta);
-            newEndY = GET_Y_ROTATION(lineSegmentPoint.getM_coordinate(2), lineSegmentPoint.getM_coordinate(3), clusterEntry.cosTheta, clusterEntry.sinTheta);
+            newStartX = GET_X_ROTATION(lineSegmentPoint.start.x, lineSegmentPoint.start.y, clusterEntry.cosTheta, clusterEntry.sinTheta);
+            newEndX = GET_X_ROTATION(lineSegmentPoint.end.x, lineSegmentPoint.end.y, clusterEntry.cosTheta, clusterEntry.sinTheta);
+            newStartY = GET_Y_ROTATION(lineSegmentPoint.start.x, lineSegmentPoint.start.y, clusterEntry.cosTheta, clusterEntry.sinTheta);
+            newEndY = GET_Y_ROTATION(lineSegmentPoint.end.x, lineSegmentPoint.end.y, clusterEntry.cosTheta, clusterEntry.sinTheta);
 
-            coefficient = (currValue - newStartX) / (newEndX - newStartX);
-            sweepPoint.setM_coordinate(0, currValue);
-            sweepPoint.setM_coordinate(1, newStartY + coefficient * (newEndY - newStartY));
+            double coefficient = (currValue - newStartX) / (newEndX - newStartX);
 
-            return;
+            return new Point2D(currValue, newStartY + coefficient * (newEndY - newStartY));
         }
 
 
@@ -679,11 +602,11 @@ namespace Traclus {
             //  the start and end values of the first dimension (e.g., the x value in the 2-dimension)
             //  NOTE: this program code works only for the 2-dimensional data
 
-            CMDPoint aLineSegment = m_lineSegmentPointArray[lineSegmentId];
-            double orderingValue1 = GET_X_ROTATION(aLineSegment.getM_coordinate(0),
-                    aLineSegment.getM_coordinate(1), clusterEntry.cosTheta, clusterEntry.sinTheta);
-            double orderingValue2 = GET_X_ROTATION(aLineSegment.getM_coordinate(2),
-                    aLineSegment.getM_coordinate(3), clusterEntry.cosTheta, clusterEntry.sinTheta);
+            Segment aLineSegment = m_lineSegmentPointArray[lineSegmentId];
+            double orderingValue1 = GET_X_ROTATION(aLineSegment.start.x,
+                    aLineSegment.start.y, clusterEntry.cosTheta, clusterEntry.sinTheta);
+            double orderingValue2 = GET_X_ROTATION(aLineSegment.end.x,
+                    aLineSegment.end.y, clusterEntry.cosTheta, clusterEntry.sinTheta);
 
             CandidateClusterPoint existingCandidatePoint, newCandidatePoint1, newCandidatePoint2;
             int i, j;
@@ -742,18 +665,17 @@ namespace Traclus {
             }
             return;
         }
-        private void computeEPSNeighborhood(CMDPoint startPoint, CMDPoint endPoint, double eps, HashSet<int> result) {
+        private void computeEPSNeighborhood(Point2D startPoint, Point2D endPoint, double eps, HashSet<int> result) {
             result.Clear();
             for (int j = 0; j < m_nTotalLineSegments; j++) {
-                extractStartAndEndPoints(j, m_startPoint2, m_endPoint2);
-                double distance = computeDistanceBetweenTwoLineSegments(startPoint, endPoint, m_startPoint2, m_endPoint2);
+                double distance = computeDistanceBetweenTwoLineSegments(startPoint, endPoint, m_lineSegmentPointArray[j].start, m_lineSegmentPointArray[j].end);
                 //  if the distance is below the threshold, this line segment belongs to the eps-neighborhood
                 if (distance <= eps) result.Add(j);
             }
             return;
         }
-        private double computeDistanceBetweenTwoLineSegments(CMDPoint startPoint1,
-                CMDPoint endPoint1, CMDPoint startPoint2, CMDPoint endPoint2) {
+        private double computeDistanceBetweenTwoLineSegments(Point2D startPoint1,
+                Point2D endPoint1, Point2D startPoint2, Point2D endPoint2) {
             double perpendicularDistance = 0;
             double parallelDistance = 0;
             double angleDistance = 0;
@@ -793,8 +715,8 @@ namespace Traclus {
         }
 
 
-        private double subComputeDistanceBetweenTwoLineSegments(CMDPoint startPoint1,
-                CMDPoint endPoint1, CMDPoint startPoint2, CMDPoint endPoint2,
+        private double subComputeDistanceBetweenTwoLineSegments(Point2D startPoint1,
+                Point2D endPoint1, Point2D startPoint2, Point2D endPoint2,
                 double perpendicularDistance, double parallelDistance,
                 double angleDistance) {
 
@@ -803,28 +725,28 @@ namespace Traclus {
             double length1, length2;
 
             //  the length of the first line segment
-            length1 = measureDistanceFromPointToPoint(startPoint1, endPoint1);
+            length1 = (startPoint1 - endPoint1).Length();
             //  the length of the second line segment
-            length2 = measureDistanceFromPointToPoint(startPoint2, endPoint2);
+            length2 = (startPoint2 - endPoint2).Length();
 
             //  compute the perpendicular distance and the parallel distance
             //  START ...
             if (length1 > length2) {
                 perDistance1 = measureDistanceFromPointToLineSegment(startPoint1, endPoint1, startPoint2);
-                if (m_coefficient < 0.5) parDistance1 = measureDistanceFromPointToPoint(startPoint1, m_projectionPoint);
-                else parDistance1 = measureDistanceFromPointToPoint(endPoint1, m_projectionPoint);
+                if (m_coefficient < 0.5) parDistance1 = (startPoint1 - m_projectionPoint).Length();
+                else parDistance1 = (endPoint1 - m_projectionPoint).Length();
 
                 perDistance2 = measureDistanceFromPointToLineSegment(startPoint1, endPoint1, endPoint2);
-                if (m_coefficient < 0.5) parDistance2 = measureDistanceFromPointToPoint(startPoint1, m_projectionPoint);
-                else parDistance2 = measureDistanceFromPointToPoint(endPoint1, m_projectionPoint);
+                if (m_coefficient < 0.5) parDistance2 = (startPoint1 - m_projectionPoint).Length();
+                else parDistance2 = (endPoint1 - m_projectionPoint).Length();
             } else {
                 perDistance1 = measureDistanceFromPointToLineSegment(startPoint2, endPoint2, startPoint1);
-                if (m_coefficient < 0.5) parDistance1 = measureDistanceFromPointToPoint(startPoint2, m_projectionPoint);
-                else parDistance1 = measureDistanceFromPointToPoint(endPoint2, m_projectionPoint);
+                if (m_coefficient < 0.5) parDistance1 = (startPoint2 - m_projectionPoint).Length();
+                else parDistance1 = (endPoint2 - m_projectionPoint).Length();
 
                 perDistance2 = measureDistanceFromPointToLineSegment(startPoint2, endPoint2, endPoint1);
-                if (m_coefficient < 0.5) parDistance2 = measureDistanceFromPointToPoint(startPoint2, m_projectionPoint);
-                else parDistance2 = measureDistanceFromPointToPoint(endPoint2, m_projectionPoint);
+                if (m_coefficient < 0.5) parDistance2 = (startPoint2 - m_projectionPoint).Length();
+                else parDistance2 = (endPoint2 - m_projectionPoint).Length();
 
             }
 
@@ -852,13 +774,6 @@ namespace Traclus {
 
 
         }
-        private void extractStartAndEndPoints(int index, CMDPoint startPoint, CMDPoint endPoint) {//  for speedup
-                                                                                                  //  compose the start and end points of the line segment
-            for (int i = 0; i < m_document.m_nDimensions; i++) {
-                startPoint.setM_coordinate(i, m_lineSegmentPointArray[index].getM_coordinate(i));
-                endPoint.setM_coordinate(i, m_lineSegmentPointArray[index].getM_coordinate(m_document.m_nDimensions + i)); ;
-            }
-        }
 
         public bool estimateParameterValue(Parameter p) {
 
@@ -874,8 +789,7 @@ namespace Traclus {
                 totalSize = 0;
                 seeds.Clear();
                 for (int i = 0; i < m_nTotalLineSegments; i++) {
-                    extractStartAndEndPoints(i, m_startPoint1, m_endPoint1);
-                    computeEPSNeighborhood(m_startPoint1, m_endPoint1, eps, seeds);
+                    computeEPSNeighborhood(m_lineSegmentPointArray[i].start, m_lineSegmentPointArray[i].end, eps, seeds);
                     EpsNeighborhoodSize[i] = seeds.Count;
                     totalSize += seeds.Count;
                     seeds.Clear();

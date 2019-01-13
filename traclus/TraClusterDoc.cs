@@ -55,12 +55,10 @@ namespace Traclus {
 
                     Trajectory pTrajectoryItem = new Trajectory(trajectoryId, m_nDimensions);
                     for (int j = 0; j < nPoints; j++) {
-                        CMDPoint point = new CMDPoint(m_nDimensions);   // initialize the CMDPoint class for each point
+                        Point2D point = new Point2D(0, 0);   // initialize the CMDPoint class for each point
 
-                        for (int k = 0; k < m_nDimensions; k++) {
-                            double value = sc.nextDouble();
-                            point.setM_coordinate(k, value);
-                        }
+                        point.x = sc.nextDouble();
+                        point.y = sc.nextDouble();
                         pTrajectoryItem.addPointToArray(point);
                     }
 
@@ -120,8 +118,8 @@ namespace Traclus {
                 Console.WriteLine(m_clusterList[i].getM_clusterId());
                 for (int j = 0; j < m_clusterList[i].getM_PointArray().Count; j++) {
 
-                    double x = m_clusterList[i].getM_PointArray()[j].getM_coordinate(0);
-                    double y = m_clusterList[i].getM_PointArray()[j].getM_coordinate(1);
+                    double x = m_clusterList[i].getM_PointArray()[j].x;
+                    double y = m_clusterList[i].getM_PointArray()[j].y;
                     Console.Write("   " + x + " " + y + "   ");
                 }
                 Console.WriteLine("");
@@ -138,8 +136,8 @@ namespace Traclus {
                     writer.WriteLine("clusterID: " + m_clusterList[i].getM_clusterId() + "  Points Number:  " + m_clusterList[i].getM_PointArray().Count);
                     for (int j = 0; j < m_clusterList[i].getM_PointArray().Count; j++) {
 
-                        double x = m_clusterList[i].getM_PointArray()[j].getM_coordinate(0);
-                        double y = m_clusterList[i].getM_PointArray()[j].getM_coordinate(1);
+                        double x = m_clusterList[i].getM_PointArray()[j].x;
+                        double y = m_clusterList[i].getM_PointArray()[j].y;
                         writer.Write(x + " " + y + "   ");
                     }
                     writer.Write("\n");
