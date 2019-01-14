@@ -5,9 +5,9 @@ namespace Traclus
     public class Trajectory
     {
 
-        private int m_trajectoryId; // the identifier of this trajectory
-        private List<Point2D> m_pointArray; // the array of the trajectory points
-        private List<Point2D> m_partitionPointArray; // the array of the partition points
+        private int m_trajectoryId; // the identifier of this trajectory, input
+        private List<Point2D> m_pointArray; // the array of the trajectory points, input
+        private List<Point2D> m_partitionPointArray; // the array of the partition points, output
 
 
         public Trajectory()

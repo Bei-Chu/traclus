@@ -9,7 +9,7 @@ namespace Traclus {
             if (args.Length == 4) {
                 TraClusterDoc tcd = new TraClusterDoc();
                 tcd.OpenDocument(args[0]);
-                tcd.ClusterGenerate(double.Parse(args[2]), int.Parse(args[3])); // 25, 5~7
+                var result = tcd.GenerateCluster(tcd.m_trajectoryList, double.Parse(args[2]), int.Parse(args[3]));
                 tcd.WriteResult(args[1]);
             } else if (args.Length == 2) {
                 TraClusterDoc tcd = new TraClusterDoc();

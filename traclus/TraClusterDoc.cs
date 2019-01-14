@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Drawing;
 
 namespace Traclus {
 
@@ -8,6 +9,8 @@ namespace Traclus {
     {
         public double epsParam;
         public int minLnsParam;
+        public double minSegmentLength;
+        public int MDLCostAdwantage;
     }
 
     public class TraClusterDoc {
@@ -15,7 +18,7 @@ namespace Traclus {
         public double m_clusterRatio; // for debugging
         public List<Trajectory> m_trajectoryList; // input for traclus
         public List<Cluster> m_clusterList; // output of traclus
-        private Parameter m_parameter;
+        public Parameter m_parameter;
 
         public TraClusterDoc() {
 
@@ -25,6 +28,28 @@ namespace Traclus {
             m_parameter = new Parameter();
             m_parameter.epsParam = 0.0;
             m_parameter.minLnsParam = 0;
+            m_parameter.minSegmentLength = 0.0;
+            m_parameter.MDLCostAdwantage = 0;
+        }
+
+        public List<List<PointF>> GenerateCluster(List<Trajectory> trackList, double epsParam, int minLnsParam,
+            double minSegmentLength = 50.0, int MDLCostAdwantage = 25) {
+            List<List<PointF>> result = new List<List<PointF>>();
+
+            m_trajectoryList = trackList;
+            if (!ClusterGenerate(epsParam, minLnsParam, minSegmentLength, MDLCostAdwantage)) {
+                return result;
+            }
+
+            foreach (var cluster in m_clusterList) {
+                List<PointF> list = new List<PointF>();
+                foreach (var p in cluster.getM_PointArray()) {
+                    list.Add(new PointF((float)p.x, (float)p.y));
+                }
+                result.Add(list);
+            }
+
+            return result;
         }
 
         public bool OpenDocument(String inputFileName) {
@@ -78,10 +103,13 @@ namespace Traclus {
             return true;
         }
 
-        public bool ClusterGenerate(double epsParam, int minLnsParam) {
+        public bool ClusterGenerate(double epsParam, int minLnsParam,
+            double minSegmentLength = 50.0, int MDLCostAdwantage = 25) {
 
             m_parameter.epsParam = epsParam;
             m_parameter.minLnsParam = minLnsParam;
+            m_parameter.minSegmentLength = minSegmentLength;
+            m_parameter.MDLCostAdwantage = MDLCostAdwantage;
 
             ClusterGen generator = new ClusterGen(this);
 
@@ -97,7 +125,7 @@ namespace Traclus {
             }
 
             // SECOND STEP: Density-based Clustering
-            if (!generator.performDBSCAN(epsParam, minLnsParam))
+            if (!generator.performDBSCAN())
             {
                 Console.WriteLine("Unable to perform the DBSCAN algorithm\n");
                 return false;
@@ -110,11 +138,17 @@ namespace Traclus {
                 return false;
             }
 
+            return true;
+        }
 
-            for (int i = 0; i < m_clusterList.Count; i++) {
+        public bool WriteResult(String clusterFileName) {
+
+            for (int i = 0; i < m_clusterList.Count; i++)
+            {
                 //m_clusterList.
                 Console.WriteLine(m_clusterList[i].getM_clusterId());
-                for (int j = 0; j < m_clusterList[i].getM_PointArray().Count; j++) {
+                for (int j = 0; j < m_clusterList[i].getM_PointArray().Count; j++)
+                {
 
                     double x = m_clusterList[i].getM_PointArray()[j].x;
                     double y = m_clusterList[i].getM_PointArray()[j].y;
@@ -122,11 +156,6 @@ namespace Traclus {
                 }
                 Console.WriteLine("");
             }
-
-            return true;
-        }
-
-        public bool WriteResult(String clusterFileName) {
 
             TextWriter writer = null;
             try {
@@ -167,7 +196,7 @@ namespace Traclus {
                 Console.WriteLine("Unable to partition a trajectory\n");
                 return null;
             }
-            if (!generator.estimateParameterValue(p)) {
+            if (!generator.estimateParameterValue(ref p)) {
                 Console.WriteLine("Unable to calculate the entropy\n");
                 return null;
             }

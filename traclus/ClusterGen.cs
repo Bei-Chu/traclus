@@ -6,8 +6,7 @@ namespace Traclus {
 
         public TraClusterDoc m_document;
 
-        private double m_epsParam;
-        private int m_minLnsParam;
+        private Parameter m_parameter = new Parameter();
         private int m_nTotalLineSegments;
         private int m_currComponentId;
         // the number of dense components discovered until now
@@ -60,14 +59,12 @@ namespace Traclus {
             public List<int> trajectoryIdList = new List<int>();
             public bool enabled;
         }
-        // this default constructor should be never used
-        public ClusterGen() {
 
-        }
         // use the following constructor instead
         public ClusterGen(TraClusterDoc document) {
 
             m_document = document;
+            m_parameter = document.m_parameter;
 
             m_projectionPoint = new Point2D(0, 0);
 
@@ -103,10 +100,7 @@ namespace Traclus {
             return true;
         }
 
-        public bool performDBSCAN(double eps, int minLns) {
-
-            m_epsParam = eps;
-            m_minLnsParam = minLns;
+        public bool performDBSCAN() {
 
             m_currComponentId = 0;
 
@@ -115,7 +109,7 @@ namespace Traclus {
             }
 
             for (int i = 0; i < m_nTotalLineSegments; i++) {
-                if (m_componentIdArray[i] == UNCLASSIFIED && expandDenseComponent(i, m_currComponentId, eps, minLns)) {
+                if (m_componentIdArray[i] == UNCLASSIFIED && expandDenseComponent(i, m_currComponentId, m_parameter.epsParam, m_parameter.minLnsParam)) {
                     m_currComponentId++;
                 }
             }
@@ -139,7 +133,7 @@ namespace Traclus {
                     startPoint = pTrajectory.getM_partitionPointArray()[j];
                     endPoint = pTrajectory.getM_partitionPointArray()[j + 1];
 
-                    if ((startPoint - endPoint).Length() < MIN_LINESEGMENT_LENGTH) {
+                    if ((startPoint - endPoint).Length() < m_parameter.minSegmentLength) {
                         continue;
                     }
                     m_nTotalLineSegments++;
@@ -180,7 +174,7 @@ namespace Traclus {
                     partialPartitionMDLCost = computeModelCost(pTrajectory, startIndex, startIndex + length) +
                             computeEncodingCost(pTrajectory, startIndex, startIndex + length);
 
-                    if (fullPartitionMDLCost + MDL_COST_ADWANTAGE < partialPartitionMDLCost) {
+                    if (fullPartitionMDLCost + m_parameter.MDLCostAdwantage < partialPartitionMDLCost) {
 
                         pTrajectory.addPartitionPointToArray(pTrajectory.getM_pointArray()[startIndex + length - 1]);
                         startIndex = startIndex + length - 1;
@@ -432,7 +426,7 @@ namespace Traclus {
                 LineSegmentCluster clusterEntry = (m_lineSegmentClusters[i]);
 
                 //  a line segment cluster must have trajectories more than the minimum threshold
-                if (clusterEntry.nTrajectories >= m_minLnsParam) {
+                if (clusterEntry.nTrajectories >= m_parameter.minLnsParam) {
                     clusterEntry.enabled = true;
                     // m_lineSegmentClusters[i].enabled = true;
                     //  DEBUG: count the number of trajectories that belong to clusters
@@ -509,8 +503,8 @@ namespace Traclus {
                 }
 
                 // if the current density exceeds a given threshold
-                if (lineSegments.Count >= m_minLnsParam) {
-                    if (Math.Abs(candidatePoint.orderingValue - prevOrderingValue) > ((double)MIN_LINESEGMENT_LENGTH / 1.414)) {
+                if (lineSegments.Count >= m_parameter.minLnsParam) {
+                    if (Math.Abs(candidatePoint.orderingValue - prevOrderingValue) > ((double)m_parameter.minSegmentLength / 1.414)) {
                         computeAndRegisterClusterPoint(clusterEntry, candidatePoint.orderingValue, lineSegments);
                         prevOrderingValue = candidatePoint.orderingValue;
                         nClusterPoints++;
@@ -769,7 +763,7 @@ namespace Traclus {
 
         }
 
-        public bool estimateParameterValue(Parameter p) {
+        public bool estimateParameterValue(ref Parameter p) {
 
             double entropy, minEntropy = (double)INT_MAX;
             double eps, minEps = (double)INT_MAX;
@@ -803,6 +797,8 @@ namespace Traclus {
             // setup output arguments
             p.epsParam = minEps;
             p.minLnsParam = (int)Math.Ceiling((double)minTotalSize / (double)m_nTotalLineSegments);
+            p.minSegmentLength = MIN_LINESEGMENT_LENGTH;
+            p.MDLCostAdwantage = MDL_COST_ADWANTAGE;
             return true;
         }
 
